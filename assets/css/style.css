@@ -1,0 +1,15 @@
+.table-component .table-container {
+    margin: 0;
+}
+
+.table-component .table-container th {
+    display: none;
+}
+
+.container {
+    margin-bottom: 150px !important;
+}
+
+#zoom-id, #zoom-pass {
+    
+}
