@@ -45,17 +45,17 @@
         ?>
         <div class="cell-sm-full cell-md-3 cell-lg-2 main-calendar">
             <?php if($lesson['isCurrent'] != 0):?>   
-                <div class="bg-cyan text-center fg-white mb-0 d-none-fs d-none-sm d-none-md d-block-lg"><?= $day ?></div>
+                <div class="bg-cyan text-center fg-white mb-0 d-none-fs d-none-sm d-none-md d-block-lg"><?= explode('-', $day)[2] ?></div>
                 <div class="row bg-cyan fg-white mb-0 ml-0 mr-0 d-none-lg">
                     <div class="cell-fs-2 text-center"><?= $lesson['day'] ?></div>
-                    <div class="cell-fs-10 text-center"><?= $day ?></div>
+                    <div class="cell-fs-10 text-center"><?= explode('-', $day)[2] ?></div>
                 </div>
             <?php else: ?>
                 <a name="currentDay"></a>
-                <div class="bg-green text-center fg-white mb-0 d-none-fs d-none-sm d-none-md d-block-lg"><?= $day ?></div>
+                <div class="bg-green text-center fg-white mb-0 d-none-fs d-none-sm d-none-md d-block-lg"><?= explode('-', $day)[2] ?></div>
                 <div class="row bg-green fg-white mb-0 ml-0 mr-0 d-none-lg">
                     <div class="cell-fs-2 text-center"><?= $lesson['day'] ?></div>
-                    <div class="cell-fs-10 text-center"><?= $day ?></div>
+                    <div class="cell-fs-10 text-center"><?= explode('-', $day)[2] ?></div>
                 </div>
             <?php endif;?>
             
@@ -69,20 +69,19 @@
                     data-role="table">
                 <thead class="bg-cyan fg-white text-center">
                     <tr>
-                        <th data-name="para"></th>
+                        <th data-name="couple"></th>
                         <th data-name="name"></th>
-                        <th data-name="btn"></th>
                     </tr>
                 </thead>
                 <tbody class="cell-hover">
-                    <?php foreach($lesson['classes'] as $numOfPara => $content):?>
+                    <?php foreach($lesson['classes'] as $numOfСouple => $content):?>
                     <?php 
-                        if($numOfPara == 7 && (isset($lesson['classes'][7]['id_item']) || isset($lesson['classes'][8]['id_item']) || isset($lesson['classes'][9]['id_item']))) {
+                        if($numOfСouple == 7 && (isset($lesson['classes'][7]['id_item']) || isset($lesson['classes'][8]['id_item']) || isset($lesson['classes'][9]['id_item']))) {
                             break;
                         }
                     ?>
                     <tr>
-                        <td><?= $numOfPara ?></td>
+                        <td><?= $numOfСouple ?></td>
                         <td >
                             <div class="lesson-info">
                                 <input type="hidden" name="lesson-id" value="<?= $content['id_item'] ?>">

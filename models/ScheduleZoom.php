@@ -11,6 +11,7 @@
                 ])->fetch();
         }
 
+        // TODO Закончить функцию парсинга
         public static function parseZoomInfo(string $zoomInfo) 
         {
             // 000 000 0000
@@ -19,14 +20,26 @@
 
             // SecurityКод доступа 9n95Au
 
-            $result = [];
+            $result  = [];
+            $infoArr = [];
             // $zoomArrInfo = explode(' ', $zoomInfo);
 
-            preg_match('/\d{3}\s\d{3}\s\d{4}/', $zoomInfo, $result['zoom_id'], PREG_OFFSET_CAPTURE);
-            $result['zoom_id'] = $result['zoom_id'][0][0];
+            preg_match('/\d{3}\s\d{3}\s\d{4}/', $zoomInfo, $infoArr['zoom_id'], PREG_OFFSET_CAPTURE);
+            if($infoArr['zoom_id']) {
+                $result['zoom_id'] = $infoArr['zoom_id'][0][0];
+            }
             
-            preg_match('/https:(.*)/', $zoomInfo, $result['zoom_link'], PREG_OFFSET_CAPTURE);
-            $result['zoom_link'] = str_replace('\/', '/', $result['zoom_link'][0][0]);
+            preg_match('/SecurityКод\sдоступа\s(.*)/', $zoomInfo, $infoArr['zoom_pass'], PREG_OFFSET_CAPTURE);
+            if($infoArr['zoom_pass']) {
+                $infoArr['zoom_pass'][0][0] =  preg_replace("/\s{2,}/",' ', $infoArr['zoom_pass'][0][0]);
+                $zoomPassArr = explode(' ', trim($infoArr['zoom_pass'][0][0]));
+                $result['zoom_pass'] = $zoomPassArr[array_search('доступа', $zoomPassArr) + 1];
+            }
+
+            preg_match('/https:(.*)/', $zoomInfo, $infoArr['zoom_link'], PREG_OFFSET_CAPTURE);
+            if($infoArr['zoom_link']) {
+                $result['zoom_link'] = str_replace('\/', '/', $infoArr['zoom_link'][0][0]);
+            }
 
             return $result;
         }

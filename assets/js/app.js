@@ -18,6 +18,7 @@ window.onload = (event) => {
                     },
             success: function(response)
             {
+                console.log(response);
                 let jsonData = JSON.parse(response);
 
                 // Код не очень, следует строить dom элементы
@@ -42,14 +43,16 @@ window.onload = (event) => {
 
                         let zoomLink = `<div id="all-info"><a target="_blank" href="${jsonData.zoomInfo.zoom_link}">Zoom Link</div></a>`;
                         
-                        resultInput = `<b>Ідентифікатор конференції:</b><br>` + zoomIdInput +
+                        resultInput += `<b>Ідентифікатор конференції:</b><br>` + zoomIdInput +
                                         `<br><b>Код доступу:</b><br>` + zoomPassInput + zoomLink;
                     }
-                    else 
+                    if(jsonData.onlineInfo)
                     {
-                        let zoomAll = `<div id="all-info">${jsonData.onlineInfo}</div>`;
-                        resultInput = zoomAll;
+                        let zoomAll = `
+                                       <div class="container"><p style="white-space: pre-line;">${jsonData.onlineInfo}</p></div>`;
+                        resultInput += zoomAll;
                     }
+                    
                 } else {
                     let zoomError = `<div id="error-info">${jsonData.error}</div>`;
                     resultInput = zoomError;

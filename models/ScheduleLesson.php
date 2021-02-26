@@ -2,27 +2,36 @@
 
     class ScheduleLesson
     {
+        protected static $minWeek;
+        protected static $maxWeek;
+
         public static function getAllLessons($id, $month, $year)
         {
             // Получаем начало и конец месяца
             $startDt = ScheduleMonth::getStartOfMount($month, $year);
             $endDt = ScheduleMonth::getEndOfMount($month, $year);
 
-            // Два запроса - установка переменных для избежания дублирования SELECT
+            // Два запроса - установка переменных для избежания дублирования SELECT 8 раз
             // в главном запросе
-            DbSchedule::dbQuery("SET @minWeek = (SELECT MIN(week_num) FROM " . SCHEDULE_WEEKS_TABLE . " WHERE `week_end` > :startDt AND `week_begin` <= :endDt)", ['startDt' => $startDt, 'endDt' => $endDt]);
-            DbSchedule::dbQuery("SET @maxWeek = (SELECT MAX(week_num) FROM " . SCHEDULE_WEEKS_TABLE . " WHERE `week_end` > :startDt AND `week_begin` <= :endDt)", ['startDt' => $startDt, 'endDt' => $endDt]);
+
+            // Берем минимальную неделю месяца из ответа бд
+            self::$minWeek = DbSchedule::dbQuery("SELECT MIN(week_num) FROM " . SCHEDULE_WEEKS_TABLE . " WHERE `week_end` > :startDt AND `week_begin` <= :endDt", ['startDt' => $startDt, 'endDt' => $endDt])->fetch()['MIN(week_num)'];
+            // Берем максимальную неделю месяца из ответа бд
+            self::$maxWeek = DbSchedule::dbQuery("SELECT MAX(week_num) FROM " . SCHEDULE_WEEKS_TABLE . " WHERE `week_end` > :startDt AND `week_begin` <= :endDt", ['startDt' => $startDt, 'endDt' => $endDt])->fetch()['MAX(week_num)'];
+
             $sql = "
-                SELECT @minWeek, @maxWeek, " . SCHEDULE_TABLE . ".*, planes.name_subject, planes.short_subject, teacher.familia, teacher.imya, teacher.otchestvo, room.box, room.nomber_room
+                SELECT " . SCHEDULE_TABLE . ".*, planes.name_subject, planes.short_subject, teacher.familia, teacher.imya, teacher.otchestvo, room.box, room.nomber_room
                 FROM `" . SCHEDULE_TABLE . "`
                 JOIN planes ON planes.id_subject = " . SCHEDULE_TABLE . ".subject_id
                 JOIN teacher ON teacher.id_teacher = " . SCHEDULE_TABLE . ".teacher_id
                 JOIN room ON room.id_room = " . SCHEDULE_TABLE . ".room_id
-                WHERE `group_id` = :id AND ((begin >= @minWeek AND begin <= @maxWeek) OR (end >= @minWeek AND end <= @maxWeek) OR (begin <= @minWeek AND end >= @maxWeek))            
+                WHERE `group_id` = :id AND ((begin >= :minWeek AND begin <= :maxWeek) OR (end >= :minWeek AND end <= :maxWeek) OR (begin <= :minWeek AND end >= :maxWeek))            
                 ";
 
             return DbSchedule::dbQuery($sql, [
-                'id' => $id,
+                'id'      => $id,
+                'minWeek' => self::$minWeek,
+                'maxWeek' => self::$maxWeek,
                 ])->fetchAll();
         }
 
@@ -30,54 +39,19 @@
         // Обрабатывает данные занятий из базы и переводит их в календарный вид
         public static function processMounthLessons($lessons) 
         {
-            $result = [];
-
-            // Берем минимальную неделю месяца из ответа бд
-            $minWeek = $lessons[0]['@minWeek'];
-
-            // Берем максимальную неделю месяца из ответа бд
-            $maxWeek = $lessons[0]['@maxWeek'];
-
             // Расчитываем дату (ВС) последней недели месяца
-            $endDate = ScheduleWeek::weekEndToDate(ScheduleWeek::getWeeks()[$maxWeek]);
+            $endDate = ScheduleWeek::weekEndToDate(ScheduleWeek::getWeeks()[self::$maxWeek]);
 
-            // Заполняем пустой массив
-            // Необходимо заполнить его пустыми значениями прежде чем 
-            // перезаписать в него существующие занятия
-            $currentDate = ScheduleWeek::weekBeginToDate(ScheduleWeek::getWeeks()[$minWeek]);
-            while($currentDate < $endDate) {
-                if($currentDate->format('D') != 'Sun')
-                    {
-                        $currentNumDate = (int) $currentDate->format('d');
-                        for($i = 1; $i <= 9; $i++) {
-                            $result[$currentNumDate]['classes'][$i] = [
-                                'id_item'       => '',
-                                'week'          => '',
-                                'name_subject'  => '',
-                                'short_subject' => '',
-                                'familia'       => '',
-                                'imya'          => '',
-                                'otchestvo'     => '',
-                                'box'           => '',
-                                'nomber_room'   => '',
-                                'short_teacher' => '',
-                            ];
-                        }
-                    }
-                // Счетчик цикла - увеличивает день на +1
-                $currentDate->add(new DateInterval('P1D'));
-            }
-           
-            
+            $calendar = self::getEmptyCalendar();
 
             // Заполняем массив данными
             foreach ( $lessons as $key => $lesson) {
                 // Устанавливает текущую дату в начало месяца первой недели месяца (ПН)
                 // Необходимо перезаписывать его после каждого завершения цикла while 
-                $currentDate = ScheduleWeek::weekBeginToDate(ScheduleWeek::getWeeks()[$minWeek]);
+                $currentDate = ScheduleWeek::weekBeginToDate(ScheduleWeek::getWeeks()[self::$minWeek]);
                 
                 // Берем все возможные даты проведения занятия в текущем месяце
-                $dates = ScheduleDates::getDates($minWeek, $maxWeek, $lesson['day'], '***');
+                $dates = ScheduleDates::getDates(self::$minWeek, self::$maxWeek, $lesson['day'], '***');
                 
                 // Берем все даты текущего занятия 
                 $lessonDates = ScheduleDates::getDates($lesson['begin'], $lesson['end'], $lesson['day'], $lesson['stars']);
@@ -86,24 +60,24 @@
                 $intersection = ScheduleDates::intersectDatesInArr($dates, $lessonDates);
                 
                 // Цикл проходит по всем датам текущего месяца
-                while($currentDate < $endDate) {
+                while($currentDate <= $endDate) {
                     // Если не воскресенье
                     if($currentDate->format('D') != 'Sun')
                     {
-                        // Берем число из даты
-                        $currentNumDate = (int) $currentDate->format('d');
+                        // Переводим дату в строку
+                        $currentStrDate = $currentDate->format('Y-m-d');
 
                         // Это сегодня?
-                        $result[$currentNumDate]['isCurrent'] = strcmp((new DateTime('now'))->format('Y-m-d'), $currentDate->format('Y-m-d'));
+                        $calendar[$currentStrDate]['isCurrent'] = strcmp((new DateTime('now'))->format('Y-m-d'), $currentDate->format('Y-m-d'));
                         
                         // Название дня недели 
-                        $result[$currentNumDate]['day'] = ScheduleWeek::dayToString($currentDate->format('N'));
+                        $calendar[$currentStrDate]['day'] = ScheduleWeek::dayToString($currentDate->format('N'));
                         
                         // Если в пересечении дата соответствует текущей 
                         // -> заполнить ее в массив в соответствующий день недели
                         if(in_array($currentDate, $intersection))
                         {
-                            $result[$currentNumDate]['classes'][$lesson['lesson']] = [
+                            $calendar[$currentStrDate]['classes'][$lesson['lesson']] = [
                                 'id_item'       => $lesson['id_item'],
                                 // Номер текущей недели
                                 'week'          => ScheduleWeek::getWeekFromDate($currentDate),
@@ -128,6 +102,52 @@
                     $currentDate->add(new DateInterval('P1D'));
                 }
             }
-            return $result;
+            return $calendar;
+        }
+
+        // Возвращает пустой каркас массива с пустым рассписанием на текущий месяц
+        // Необходимо заполнить его пустыми значениями прежде чем 
+        // перезаписать в него существующие занятия
+        public static function getEmptyCalendar()
+        {
+            $calendar = [];
+
+            $currentDate = ScheduleWeek::weekBeginToDate(ScheduleWeek::getWeeks()[self::$minWeek]);
+            
+            // Расчитываем дату (ВС) последней недели месяца
+            $endDate = ScheduleWeek::weekEndToDate(ScheduleWeek::getWeeks()[self::$maxWeek]);
+
+            while($currentDate <= $endDate) { 
+                if($currentDate->format('D') != 'Sun')
+                    {
+                        // Переводим дату в строку
+                        $currentStrDate = $currentDate->format('Y-m-d');
+
+                        // Это сегодня?
+                        $calendar[$currentStrDate]['isCurrent'] = strcmp((new DateTime('now'))->format('Y-m-d'), $currentDate->format('Y-m-d'));
+                        
+                        // Название дня недели 
+                        $calendar[$currentStrDate]['day'] = ScheduleWeek::dayToString($currentDate->format('N'));
+
+                        for($i = 1; $i <= 9; $i++) {
+                            $calendar[$currentStrDate]['classes'][$i] = [
+                                'id_item'       => '',
+                                'week'          => '',
+                                'name_subject'  => '',
+                                'short_subject' => '',
+                                'familia'       => '',
+                                'imya'          => '',
+                                'otchestvo'     => '',
+                                'box'           => '',
+                                'nomber_room'   => '',
+                                'short_teacher' => '',
+                            ];
+                        }
+                    }
+                // Счетчик цикла - увеличивает день на +1
+                $currentDate->add(new DateInterval('P1D'));
+            }
+
+            return $calendar;
         }
     }

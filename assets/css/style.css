@@ -13,3 +13,14 @@
 #zoom-id, #zoom-pass {
     
 }
+
+.wrapword {
+    white-space: -moz-pre-line !important;  /* Mozilla, since 1999 */
+    white-space: -webkit-pre-line;          /* Chrome & Safari */ 
+    white-space: -pre-line;                 /* Opera 4-6 */
+    white-space: -o-pre-line;               /* Opera 7 */
+    white-space: pre-line;                  /* CSS3 */
+    word-wrap: break-word;                  /* Internet Explorer 5.5+ */
+    word-break: break-all;
+    white-space: normal;
+}

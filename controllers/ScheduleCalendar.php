@@ -14,19 +14,20 @@
             if($year == '') {
                 $year = date('Y');
             }
-
+            
             // Не прошел проверку -> вернуть HTML 404 ошибки
             if(!is_numeric($idGroup)) {
                 return ScheduleCore::template('template', [
                     'main' => ScheduleCore::template('404'),
                 ]);
             }
-
+            
             if(!ScheduleMonth::checkMonth($month)) {
                 return ScheduleCore::template('template', [
                     'main' => ScheduleCore::template('404'),
                 ]);
             }
+            
             
             if(!ScheduleYear::checkYear($year, $month)) {
                 return ScheduleCore::template('template', [
@@ -34,6 +35,7 @@
                 ]);
             }
 
+            
             // Получить недели из базы в массив ScheduleWeek::$weeks
             // Необходимо прописать перед вызовом ScheduleFunctions::processMounthLessons()
             ScheduleWeek::setAllWeeks();
@@ -48,9 +50,7 @@
                 $allMonthLessons = ScheduleLesson::processMounthLessons($allMonthLessons);
             }
             else {
-                return ScheduleCore::template('template', [
-                    'main' => ScheduleCore::template('404'),
-                ]);
+                $allMonthLessons = ScheduleLesson::getEmptyCalendar();
             }
 
             // Берет все месяцы текущего семестра
@@ -92,14 +92,19 @@
             if($onlineInfo)
             {
                 // Вытаскивает из строки $onlineInfo['code'] ZOOM информацию и возвращает массив
-                $zoomInfo = ScheduleZoom::parseZoomInfo($onlineInfo['code']);
-                $response['zoomInfo'] = $zoomInfo;
+                // $zoomInfo = ScheduleZoom::parseZoomInfo($onlineInfo['code']);
+                // if($zoomInfo)
+                // {
+                //     $response['zoomInfo'] = $zoomInfo;
+                // }
+
+                $response['onlineInfo'] = $onlineInfo['code'];
             }
             else {
-                return ['error' => "Data [idLesson:$idLesson week:$week] not found"];
+                return ['error' => "Онлайн ідентифікаторів не знайдено"];
             }
 
-            $response['onlineInfo'] = $onlineInfo['code'];
+            
             $response['error']      = '';
 
             return $response;
